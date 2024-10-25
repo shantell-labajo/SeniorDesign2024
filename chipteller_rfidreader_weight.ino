@@ -9,17 +9,19 @@
 #define RST_PIN 5
 #define BL_LED 8
 
-// // Define stepper motor connections and steps per revolution:
-#define dirPin 31
-#define stepPin 32
-#define stepsPerRevolution 200
+// Define stepper motor connections and steps per revolution:
+#define dirPin1 31
+#define stepPin1 32
+#define dirPin2 33
+#define stepPin2 34
+#define stepsPerRevolution 100
 
 //initialize rfid module
 MFRC522 rfid(SS_PIN, RST_PIN);
 
 // HX711 circuit wiring
-const int LOADCELL_DOUT_PIN = 2;
-const int LOADCELL_SCK_PIN = 3;
+const int LOADCELL_DOUT_PIN = 50;
+const int LOADCELL_SCK_PIN = 51;
 HX711 scale;
 
 // "database" value to be read from $100 poker chip
@@ -40,22 +42,28 @@ void setup() {
   rfid.PCD_Init(); // init MFRC522
 
   // motor pins
-  pinMode(stepPin, OUTPUT);
-  pinMode(dirPin, OUTPUT);
+  pinMode(stepPin1, OUTPUT);
+  pinMode(dirPin1, OUTPUT);
+  pinMode(stepPin2, OUTPUT);
+  pinMode(dirPin2, OUTPUT);
 
-  //load cell weight initialize
+  delay(3000);
+
+  // load cell weight initialize
+  Serial.println("Load cell weight setup.\n");
   scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
   scale.set_scale(113);
   scale.tare();
+  Serial.println("Done.\n");
 
-  delay(3000);
+  // delay(3000);
   Serial.println("Setup success."); //for rfid reader
   // Reset the loop if no new chip present on the sensor/reader. This saves the entire process when idle.
 	Serial.println("Please insert chips.");
 }
 
 void loop() {
-  
+
   if ( ! rfid.PICC_IsNewCardPresent()) {
 		return;
 	}
@@ -64,6 +72,8 @@ void loop() {
 	if ( ! rfid.PICC_ReadCardSerial()) {
 		return;
 	}
+
+  spin_motor();
 
   Serial.println("Chip inserted.");
   MFRC522::StatusCode status;
@@ -121,7 +131,7 @@ void loop() {
   Serial.println("Begin weight check.");
   scale.tare();
 
-  delay(2000);
+  delay(1000);
   Serial.print(scale.get_units(),1); Serial.println(" g");
 
   if (scale.get_units(10) > 4 && scale.get_units(10) < 6) {
@@ -136,6 +146,7 @@ void loop() {
   }
 
   //move motor here
+  delay(100);
   spin_motor();
 
   //sorting logic w/ other motors here
@@ -170,14 +181,17 @@ void dump_byte_array(byte *buffer, byte bufferSize) {
 // function to spin stepper motors for transfer of poker chips
 void spin_motor() {
 // Set the spinning direction counterclockwise:
-  digitalWrite(dirPin, LOW);
+  digitalWrite(dirPin1, LOW);
+  digitalWrite(dirPin2, LOW);
 
   // Spin the stepper motor 1 revolution 
   for (int i = 0; i < stepsPerRevolution; i++) {
     // These four lines result in 1 step:
-    digitalWrite(stepPin, HIGH);
-    delayMicroseconds(2000);
-    digitalWrite(stepPin, LOW);
-    delayMicroseconds(2000);
+    digitalWrite(stepPin1, HIGH);
+    digitalWrite(stepPin2, HIGH);
+    delayMicroseconds(1000);
+    digitalWrite(stepPin1, LOW);
+    digitalWrite(stepPin2, LOW);
+    delayMicroseconds(1000);
   }
 }
